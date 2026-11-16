@@ -1,0 +1,36 @@
+[package]
+name = "simpleedit-api"
+version = "1.0.0"
+edition = "2021"
+rust-version = "1.90"
+publish = false
+description = "The API plugin of SimpleEdit"
+license = "MIT"
+
+[[bin]]
+name = "api"
+path = "src/main.rs"
+
+[dependencies]
+simpleedit-plugin = { git = "https://github.com/simple-edit-app/plugin-sdk", tag = "v0.6.1" }
+serde = { version = "1", features = ["derive"] }
+serde_json = { version = "1", features = ["preserve_order", "arbitrary_precision"] }
+rust-i18n = "3"
+regex = "1"
+chrono = { version = "0.4", default-features = false, features = ["clock", "std"] }
+serde_norway = "0.9"
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls", "rustls-tls-native-roots", "multipart", "gzip", "brotli", "deflate"] }
+tokio = { version = "1", features = ["rt", "rt-multi-thread", "time", "sync", "fs", "macros", "net", "io-util"] }
+
+[target.'cfg(target_os = "macos")'.dependencies]
+keyring = { version = "3", default-features = false, features = ["apple-native"] }
+
+[target.'cfg(target_os = "linux")'.dependencies]
+keyring = { version = "3", default-features = false, features = ["sync-secret-service", "crypto-rust", "vendored"] }
+
+[dev-dependencies]
+tempfile = "3"
+
+[profile.release]
+strip = true
+lto = true

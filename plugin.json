@@ -1,0 +1,25 @@
+{
+  "id": "simpleedit.api",
+  "name": { "en": "API", "fr": "API" },
+  "version": "1.0.0",
+  "api": 1,
+  "description": {
+    "en": "A light Postman: requests in tabs, collections, environments, tests of the answers, Postman, OpenAPI and cURL",
+    "fr": "Un Postman léger : requêtes en onglets, collections, environnements, tests des réponses, Postman, OpenAPI et cURL"
+  },
+  "author": "SimpleEdit",
+  "repository": "simple-edit-app/plugin-api",
+  "license": "MIT",
+  "command": ["bin/api"],
+  "contributes": {
+    "commands": [
+      { "id": "api.new_request", "title": { "en": "API: New Request", "fr": "API : nouvelle requête" } },
+      { "id": "api.show", "title": { "en": "API: Show the Collections", "fr": "API : afficher les collections" } },
+      { "id": "api.import_curl", "title": { "en": "API: Import a cURL Command", "fr": "API : importer une commande cURL" } }
+    ],
+    "panels": [
+      { "id": "api", "title": { "en": "API", "fr": "API" }, "icon": "", "location": "sidebar" },
+      { "id": "settings", "title": { "en": "Network", "fr": "Réseau" }, "location": "settings" }
+    ]
+  }
+}
