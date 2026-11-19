@@ -497,8 +497,7 @@ pub fn export(request: &Resolved) -> String {
     }
     for (k, v) in &request.headers {
         // What the app adds on its own is not part of the command.
-        let default = (k.eq_ignore_ascii_case("user-agent")
-            && (v.starts_with("Ardoise/") || v.starts_with("SimpleEdit/")))
+        let default = (k.eq_ignore_ascii_case("user-agent") && v.starts_with("Ardoise/"))
             || (k.eq_ignore_ascii_case("accept") && v == "*/*");
         if !default {
             parts.push(format!("-H {}", quote(&format!("{k}: {v}"))));
@@ -718,24 +717,6 @@ mod tests {
             ..Body::default()
         };
         assert!(export(&g.resolve(&HashMap::new())).contains("--data-binary '@/tmp/a b'"));
-    }
-
-    #[test]
-    fn the_default_user_agent_is_left_out_under_its_old_name_too() {
-        // What the app sent before it was renamed (SimpleEdit) is still its own.
-        for agent in ["Ardoise/1.2.0", "SimpleEdit/1.0.0"] {
-            let mut r = Request::new("");
-            r.url = "https://x".into();
-            r.headers = vec![Pair::new("User-Agent", agent)];
-            assert!(
-                !export(&r.resolve(&HashMap::new())).contains("User-Agent"),
-                "{agent}"
-            );
-        }
-        let mut mine = Request::new("");
-        mine.url = "https://x".into();
-        mine.headers = vec![Pair::new("User-Agent", "my-client/3")];
-        assert!(export(&mine.resolve(&HashMap::new())).contains("User-Agent: my-client/3"));
     }
 
     #[test]

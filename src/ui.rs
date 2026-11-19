@@ -1,6 +1,6 @@
 //! What the panel and the tabs of requests show, as nodes for the editor.
 
-use simpleedit_plugin::ui::*;
+use ardoise_plugin::ui::*;
 
 use crate::api::http::{self, Class};
 use crate::api::model::{

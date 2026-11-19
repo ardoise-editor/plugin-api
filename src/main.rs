@@ -16,10 +16,10 @@ mod ui;
 
 use std::sync::{Arc, Mutex, MutexGuard};
 
+use ardoise_plugin::protocol::{Context, InitializeParams, Settings as EditorSettings, UiEvent};
+use ardoise_plugin::ui::{column, input, text, Node, TextStyle};
+use ardoise_plugin::{run, Host, Plugin};
 use serde::{Deserialize, Serialize};
-use simpleedit_plugin::protocol::{Context, InitializeParams, Settings as EditorSettings, UiEvent};
-use simpleedit_plugin::ui::{column, input, text, Node, TextStyle};
-use simpleedit_plugin::{run, Host, Plugin};
 
 use api::model::{
     self, CheckOp, CheckSource, Collection, Environment, ExtractSource, Folder, Item, Method, Pair,
@@ -676,13 +676,13 @@ impl ApiPlugin {
                         .cloned();
                     self.api().picked = Some((c, id));
                     if let Some(request) = request {
-                        if kind == simpleedit_plugin::protocol::TreeAction::Click {
+                        if kind == ardoise_plugin::protocol::TreeAction::Click {
                             self.open(host, request, Some((c, id)));
                         }
                     }
                 } else {
                     let mut api = self.api();
-                    let toggles = kind == simpleedit_plugin::protocol::TreeAction::Toggle
+                    let toggles = kind == ardoise_plugin::protocol::TreeAction::Toggle
                         || api.picked == Some((c, id));
                     if toggles && !api.open.remove(&folder_id) {
                         api.open.insert(folder_id);

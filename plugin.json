@@ -1,5 +1,5 @@
 {
-  "id": "simpleedit.api",
+  "id": "ardoise.api",
   "name": { "en": "API", "fr": "API" },
   "version": "1.2.1",
   "api": 1,

@@ -62,6 +62,31 @@ dependencies = [
 ]
 
 [[package]]
+name = "ardoise-api"
+version = "1.2.1"
+dependencies = [
+ "ardoise-plugin",
+ "chrono",
+ "keyring",
+ "regex",
+ "reqwest",
+ "rust-i18n",
+ "serde",
+ "serde_json",
+ "serde_norway",
+ "tempfile",
+ "tokio",
+]
+
+[[package]]
+name = "ardoise-plugin"
+version = "0.12.0"
+dependencies = [
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "async-broadcast"
 version = "0.7.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2050,32 +2075,6 @@ name = "simd-adler32"
 version = "0.3.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3a219298ac11a56ea9a6d2120044824d6f01aeb034955e7af7bc16858527deea"
-
-[[package]]
-name = "simpleedit-api"
-version = "1.2.1"
-dependencies = [
- "chrono",
- "keyring",
- "regex",
- "reqwest",
- "rust-i18n",
- "serde",
- "serde_json",
- "serde_norway",
- "simpleedit-plugin",
- "tempfile",
- "tokio",
-]
-
-[[package]]
-name = "simpleedit-plugin"
-version = "0.11.0"
-source = "git+https://github.com/simple-edit-app/plugin-sdk?tag=v0.11.0#256cbf520bdb9209c822e038dabaf2589235c2dc"
-dependencies = [
- "serde",
- "serde_json",
-]
 
 [[package]]
 name = "siphasher"
