@@ -2053,7 +2053,7 @@ checksum = "3a219298ac11a56ea9a6d2120044824d6f01aeb034955e7af7bc16858527deea"
 
 [[package]]
 name = "simpleedit-api"
-version = "1.0.0"
+version = "1.1.0"
 dependencies = [
  "chrono",
  "keyring",
@@ -2070,8 +2070,8 @@ dependencies = [
 
 [[package]]
 name = "simpleedit-plugin"
-version = "0.6.1"
-source = "git+https://github.com/simple-edit-app/plugin-sdk?tag=v0.6.1#dc24aee0a777351e135a94202241cbff4a704de7"
+version = "0.10.0"
+source = "git+https://github.com/simple-edit-app/plugin-sdk?tag=v0.10.0#a4401640aff448eb718834882b3597fbfc2dcc93"
 dependencies = [
  "serde",
  "serde_json",

@@ -74,6 +74,17 @@ fn lock(shared: &Arc<Mutex<Api>>) -> MutexGuard<'_, Api> {
 }
 
 /// The table of a request a name of the panel speaks of.
+/// The collection and the id (0: the collection itself) of a row of the
+/// tree: `c:<collection>:0`, `f:<collection>:<folder>`, `r:<collection>:<request>`.
+fn tree_row(item: &str) -> Option<(u64, u64)> {
+    let parts: Vec<u64> = item
+        .split(':')
+        .skip(1)
+        .filter_map(|n| n.parse().ok())
+        .collect();
+    Some((*parts.first()?, *parts.get(1)?))
+}
+
 fn pairs_mut<'a>(request: &'a mut Request, table: &str) -> Option<&'a mut Vec<Pair>> {
     match table {
         "params" => Some(&mut request.params),
@@ -605,6 +616,10 @@ impl ApiPlugin {
         let text = || event.text().unwrap_or_default().to_string();
         let action = event.action.as_str();
         let (head, rest) = action.split_once(':').unwrap_or((action, ""));
+        // An item of the context menu of a row: it acts on that row.
+        if let Some(row) = event.menu_item().and_then(tree_row) {
+            self.api().picked = Some(row);
+        }
         match (head, rest) {
             ("side", "collections") => self.api().side = Side::Collections,
             ("side", "history") => self.api().side = Side::History,
@@ -646,12 +661,7 @@ impl ApiPlugin {
                 let Some((item, kind)) = event.tree_item() else {
                     return;
                 };
-                let parts: Vec<u64> = item
-                    .split(':')
-                    .skip(1)
-                    .filter_map(|n| n.parse().ok())
-                    .collect();
-                let (Some(&c), Some(&id)) = (parts.first(), parts.get(1)) else {
+                let Some((c, id)) = tree_row(item) else {
                     return;
                 };
                 let folder_id = if id == 0 { c } else { id };
@@ -961,6 +971,21 @@ impl ApiPlugin {
         match head {
             "send" => return self.send(host, id),
             "save" => return self.save(host, id),
+            "resp_search_next" => {
+                // From the cursor of the body (after the match selected).
+                let at = host.editor_state(id, "resp").ok();
+                let mut api = self.api();
+                if let Some(view) = api.tabs.get_mut(id).and_then(|t| t.response.as_mut()) {
+                    view.search = text;
+                    let from = match at {
+                        Some(s) => {
+                            crate::state::offset_of(&view.shown, s.cursor.line, s.cursor.column)
+                        }
+                        None => view.found.map_or(0, |(_, end)| end),
+                    };
+                    view.found = crate::state::find_next(&view.shown, &view.search, from);
+                }
+            }
             "copy_curl" => {
                 let api = self.api();
                 if let Some(tab) = api.tabs.get(id) {
@@ -1220,6 +1245,7 @@ impl ApiPlugin {
                     "resp_search" => {
                         if let Some(view) = tab.response.as_mut() {
                             view.search = text;
+                            view.found = None;
                         }
                     }
                     _ => return,

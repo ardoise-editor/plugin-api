@@ -90,7 +90,48 @@ pub struct ResponseView {
     pub shown: String,
     pub cut: bool,
     pub search: String,
+    /// The match Enter went to in the search: its start and end in `shown`.
+    pub found: Option<(usize, usize)>,
     pub outcomes: Vec<Outcome>,
+}
+
+/// The place of the next `needle` in `text`, from `from` on and then from
+/// the start (whatever the case, for the letters of ASCII): its start and
+/// end.
+pub fn find_next(text: &str, needle: &str, from: usize) -> Option<(usize, usize)> {
+    if needle.is_empty() {
+        return None;
+    }
+    let (haystack, needle) = (text.to_ascii_lowercase(), needle.to_ascii_lowercase());
+    let mut from = from.min(haystack.len());
+    while !haystack.is_char_boundary(from) {
+        from -= 1;
+    }
+    let start = haystack[from..]
+        .find(&needle)
+        .map(|i| i + from)
+        .or_else(|| haystack.find(&needle))?;
+    Some((start, start + needle.len()))
+}
+
+/// The line and the column (in characters) of a place of the text.
+pub fn position_of(text: &str, offset: usize) -> (usize, usize) {
+    let before = &text[..offset.min(text.len())];
+    let line = before.matches('\n').count();
+    let start = before.rfind('\n').map_or(0, |i| i + 1);
+    (line, before[start..].chars().count())
+}
+
+/// The place in the text of a line and a column (in characters).
+pub fn offset_of(text: &str, line: usize, column: usize) -> usize {
+    let mut offset = 0;
+    for (n, l) in text.split('\n').enumerate() {
+        if n == line {
+            return offset + l.char_indices().nth(column).map_or(l.len(), |(i, _)| i);
+        }
+        offset += l.len() + 1;
+    }
+    text.len()
 }
 
 /// The text with its lines longer than `MAX_LINE` broken.
@@ -165,6 +206,7 @@ impl ResponseView {
             shown: String::new(),
             cut: false,
             search: String::new(),
+            found: None,
             outcomes: done.outcomes,
         };
         view.show();
@@ -189,6 +231,7 @@ impl ResponseView {
             end -= 1;
         }
         self.shown = break_long_lines(&shown[..end]);
+        self.found = None;
     }
 
     /// How many times what is searched is in the body.
@@ -505,6 +548,27 @@ pub fn now() -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn enter_in_the_search_goes_to_the_next_match_and_comes_back_round() {
+        let text = "Alpha beta\nalpha é alpha";
+        let first = find_next(text, "ALPHA", 0).unwrap();
+        assert_eq!(first, (0, 5));
+        let second = find_next(text, "alpha", first.1).unwrap();
+        assert_eq!(position_of(text, second.0), (1, 0));
+        let third = find_next(text, "alpha", second.1).unwrap();
+        // "é" is one character, two bytes.
+        assert_eq!(position_of(text, third.0), (1, 8));
+        assert_eq!(offset_of(text, 1, 8), third.0);
+        assert_eq!(
+            find_next(text, "alpha", third.1),
+            Some(first),
+            "round again"
+        );
+        assert_eq!(find_next(text, "zeta", 0), None);
+        assert_eq!(find_next(text, "", 0), None);
+        assert_eq!(find_next(text, "a", 99).map(|f| f.0), Some(0));
+    }
 
     #[test]
     fn a_very_long_line_is_broken_for_showing() {

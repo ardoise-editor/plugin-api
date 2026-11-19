@@ -92,42 +92,43 @@ fn tree_items(api: &Api, collection: &Collection, items: &[Item], needle: &str) 
         .map(|item| match item {
             Item::Request(r) => tree_item(format!("r:{}:{}", collection.id, r.id), r.title())
                 .icon("\u{f0ec}")
-                .detail(r.method.as_str()),
+                .detail(r.method.as_str())
+                .menu(item_menu(api, collection, r.id)),
             Item::Folder(f) => tree_item(format!("f:{}:{}", collection.id, f.id), f.name.clone())
                 .icon("\u{f07b}")
                 .expandable()
                 .expanded(api.is_open(f.id))
-                .children(tree_items(api, collection, &f.items, needle)),
+                .children(tree_items(api, collection, &f.items, needle))
+                .menu(item_menu(api, collection, f.id)),
         })
         .collect()
 }
 
-/// The buttons of what is picked in the tree.
-fn picked_actions(api: &Api) -> Option<Node> {
-    let (c, id) = api.picked?;
-    let collection = api.collection(c)?;
+/// The context menu of a row of the tree: a collection (`id` 0), a folder
+/// or a request of `collection`.
+fn item_menu(api: &Api, collection: &Collection, id: u64) -> Vec<MenuItem> {
     let request = id != 0 && collection.request(id).is_some();
-    let mut buttons = Vec::new();
+    let mut items = Vec::new();
     if !request {
-        buttons.push(ghost(t!("api.new_request"), "new_in"));
-        buttons.push(ghost(t!("api.new_folder"), "new_folder"));
+        items.push(MenuItem::new(t!("api.new_request"), "new_in"));
+        items.push(MenuItem::new(t!("api.new_folder"), "new_folder"));
     }
-    buttons.push(ghost(t!("api.rename"), "rename"));
+    items.push(MenuItem::new(t!("api.rename"), "rename"));
     if request {
-        buttons.push(ghost(t!("api.open"), "open_picked"));
-        buttons.push(ghost(t!("api.duplicate"), "duplicate"));
-        buttons.push(ghost(t!("api.copy_curl"), "copy_curl_of"));
+        items.push(MenuItem::new(t!("api.open"), "open_picked"));
+        items.push(MenuItem::new(t!("api.duplicate"), "duplicate"));
+        items.push(MenuItem::new(t!("api.copy_curl"), "copy_curl_of"));
     }
     if id == 0 {
         if api.running.is_some() {
-            buttons.push(ghost(t!("api.run_stop"), "cancel_run"));
+            items.push(MenuItem::new(t!("api.run_stop"), "cancel_run"));
         } else {
-            buttons.push(ghost(t!("api.run_collection"), "run"));
+            items.push(MenuItem::new(t!("api.run_collection"), "run"));
         }
-        buttons.push(ghost(t!("api.export"), "export"));
+        items.push(MenuItem::new(t!("api.export"), "export"));
     }
-    buttons.push(button(t!("api.delete"), "delete").button_style(ButtonStyle::Danger));
-    Some(row(buttons).spacing(4.0))
+    items.push(MenuItem::new(t!("api.delete"), "delete"));
+    items
 }
 
 pub fn panel(api: &Api) -> Node {
@@ -185,11 +186,9 @@ pub fn panel(api: &Api) -> Node {
                         .expandable()
                         .expanded(api.is_open(c.id))
                         .children(tree_items(api, c, &c.items, &needle))
+                        .menu(item_menu(api, c, 0))
                 })
                 .collect();
-            if let Some(actions) = picked_actions(api) {
-                body.push(actions);
-            }
             body.push(scroll(tree("tree", items)));
         }
         Side::History => {
@@ -589,7 +588,10 @@ fn response_part(tab: &ReqTab) -> Node {
             if view.pretty.is_some() {
                 tools.push(checkbox("pretty", t!("api.pretty"), view.show_pretty));
             }
-            tools.push(input("resp_search", &view.search, t!("api.search")));
+            // Enter goes to the next match.
+            tools.push(
+                input("resp_search", &view.search, t!("api.search")).on_submit("resp_search_next"),
+            );
             if !view.search.is_empty() {
                 tools.push(muted(t!("api.matches", n = view.matches())));
             }
@@ -605,7 +607,18 @@ fn response_part(tab: &ReqTab) -> Node {
                 if view.cut {
                     rows.push(muted(t!("api.cut", size = size(crate::state::MAX_SHOWN))));
                 }
-                rows.push(editor("resp", &view.shown, view.language()).read_only());
+                let mut body = editor("resp", &view.shown, view.language()).read_only();
+                if let Some((start, end)) = view.found {
+                    let at = |offset| {
+                        let (line, column) = crate::state::position_of(&view.shown, offset);
+                        EditorPos { line, column }
+                    };
+                    body = body.selection(EditorSelection {
+                        anchor: at(start),
+                        cursor: at(end),
+                    });
+                }
+                rows.push(body);
             }
         }
         RespSection::Headers => rows.push(scroll(list(
@@ -724,6 +737,61 @@ pub fn tab(api: &Api, tab: &ReqTab) -> Node {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn the_rows_of_the_tree_have_their_actions_in_a_context_menu() {
+        use crate::api::model::Folder;
+        let mut api = Api::load();
+        let mut request = crate::api::model::Request::new("users");
+        request.id = 3;
+        let rid = request.id;
+        api.collections = vec![Collection {
+            id: 1,
+            name: "Shop".into(),
+            items: vec![
+                Item::Folder(Folder {
+                    id: 2,
+                    name: "Admin".into(),
+                    items: vec![],
+                }),
+                Item::Request(request),
+            ],
+        }];
+        api.open.insert(1);
+        let json = serde_json::to_value(panel(&api)).unwrap().to_string();
+        let menu_of = |id: &str| -> Vec<String> {
+            let node: serde_json::Value = serde_json::from_str(&json).unwrap();
+            fn find(v: &serde_json::Value, id: &str) -> Option<serde_json::Value> {
+                if v["id"] == id {
+                    return Some(v["menu"].clone());
+                }
+                match v {
+                    serde_json::Value::Object(m) => m.values().find_map(|v| find(v, id)),
+                    serde_json::Value::Array(l) => l.iter().find_map(|v| find(v, id)),
+                    _ => None,
+                }
+            }
+            find(&node, id)
+                .and_then(|m| m.as_array().cloned())
+                .unwrap_or_default()
+                .iter()
+                .map(|i| i["action"].as_str().unwrap_or_default().to_string())
+                .collect()
+        };
+        let collection = menu_of("c:1:0");
+        assert!(
+            collection.contains(&"run".to_string()) && collection.contains(&"export".to_string())
+        );
+        let folder = menu_of("f:1:2");
+        assert!(folder.contains(&"new_in".to_string()) && !folder.contains(&"run".to_string()));
+        let request = menu_of(&format!("r:1:{rid}"));
+        assert!(
+            request.contains(&"duplicate".to_string()) && request.contains(&"delete".to_string())
+        );
+        assert!(!request.contains(&"new_in".to_string()));
+        // No more buttons for what is picked.
+        assert!(!json.contains("\"action\":\"rename\",\"label\""));
+    }
 
     #[test]
     fn sizes_read_well() {
