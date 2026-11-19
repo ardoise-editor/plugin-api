@@ -992,7 +992,7 @@ impl Request {
         if !has_header(&headers, "User-Agent") {
             headers.push((
                 "User-Agent".into(),
-                format!("SimpleEdit/{}", env!("CARGO_PKG_VERSION")),
+                format!("Ardoise/{}", env!("CARGO_PKG_VERSION")),
             ));
         }
         if !has_header(&headers, "Accept") {
@@ -1121,7 +1121,7 @@ mod tests {
         assert_eq!(get("X-Id"), Some("9"));
         assert_eq!(get("Authorization"), Some("Bearer tk"));
         assert_eq!(get("Content-Type"), Some("application/json"));
-        assert!(get("User-Agent").unwrap().starts_with("SimpleEdit/"));
+        assert!(get("User-Agent").unwrap().starts_with("Ardoise/"));
         assert_eq!(get("Accept"), Some("*/*"));
         assert!(out.missing.is_empty());
     }

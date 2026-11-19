@@ -1,14 +1,14 @@
 {
   "id": "simpleedit.api",
   "name": { "en": "API", "fr": "API" },
-  "version": "1.2.0",
+  "version": "1.2.1",
   "api": 1,
   "description": {
     "en": "A light Postman: requests in tabs, collections, environments, tests of the answers, Postman, OpenAPI and cURL",
     "fr": "Un Postman léger : requêtes en onglets, collections, environnements, tests des réponses, Postman, OpenAPI et cURL"
   },
-  "author": "SimpleEdit",
-  "repository": "simple-edit-app/plugin-api",
+  "author": "Ardoise Editor",
+  "repository": "ardoise-editor/plugin-api",
   "license": "MIT",
   "command": ["bin/api"],
   "contributes": {

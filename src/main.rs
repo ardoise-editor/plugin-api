@@ -1,4 +1,4 @@
-//! The API plugin of SimpleEdit: a light version of Postman. Requests to an
+//! The API plugin of Ardoise: a light version of Postman. Requests to an
 //! API in tabs, the collections that keep them, the environments with their
 //! variables, the history, tests of the answers, imports and exports of
 //! Postman, OpenAPI and cURL.
