@@ -132,6 +132,12 @@ pub fn save(id: u64, kind: &str, secret: &str) -> bool {
     kept
 }
 
+/// Takes a secret out of the keychain, whatever was known of it.
+pub fn forget(id: u64, kind: &str) {
+    mark(id, kind, false);
+    store::delete(id, kind);
+}
+
 pub fn load(id: u64, kind: &str) -> Option<String> {
     match store::get(id, kind) {
         Lookup::Found(secret) => {

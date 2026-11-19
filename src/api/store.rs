@@ -425,6 +425,37 @@ fn write_environments(environments: &[Environment], active: Option<u64>, next_id
 
 /// A secret variable's entry in the keychain is to be forgotten at the next
 /// write of the environments.
+/// Every secret of the plugin taken out of the keychain: the credentials of
+/// the requests of the collections, the secret variables of the
+/// environments, and the ones already set to go (the plugin is removed with
+/// its data).
+pub fn forget_every_secret(collections: &[Collection], environments: &[Environment]) {
+    for collection in collections {
+        let mut collection = collection.clone();
+        each_request(&mut collection.items, &mut |request| {
+            let id = request.id;
+            for (name, _) in auth_secrets(request) {
+                crate::secrets::forget(id, name);
+            }
+        });
+    }
+    for env in environments {
+        for var in env.vars.iter().filter(|v| v.secret) {
+            crate::secrets::forget(env.id, &secret_name(&var.key));
+        }
+    }
+    let stale = STALE
+        .lock()
+        .map(|mut s| std::mem::take(&mut *s))
+        .unwrap_or_default();
+    for (id, key) in stale {
+        crate::secrets::forget(id, &secret_name(&key));
+    }
+    if let Ok(mut known) = keychain_known().lock() {
+        known.clear();
+    }
+}
+
 pub fn forget_secret(env_id: u64, key: &str) {
     if key.is_empty() {
         return;
@@ -665,6 +696,47 @@ mod tests {
         assert_eq!(load().collections, vec![collection]);
         delete_collection(8);
         assert!(crate::secrets::load(77, "apiauth:token").is_none());
+    }
+
+    #[test]
+    fn removing_the_plugin_with_its_data_takes_every_secret_out_of_the_keychain() {
+        let _guard = lock();
+        let mut request = Request::new("login");
+        request.id = 91;
+        request.auth.kind = crate::api::model::AuthKind::Bearer;
+        request.auth.token = "tok-gone".into();
+        let collection = Collection {
+            id: 9,
+            name: "auth".into(),
+            items: vec![Item::Request(request)],
+        };
+        save_collection(&collection);
+        assert_eq!(
+            crate::secrets::load(91, "apiauth:token").as_deref(),
+            Some("tok-gone")
+        );
+        let env = Environment {
+            id: 92,
+            name: "prod".into(),
+            vars: vec![Variable {
+                key: "key".into(),
+                value: "k-gone".into(),
+                secret: true,
+                ..Variable::default()
+            }],
+        };
+        save_environments(std::slice::from_ref(&env), None, 93);
+        assert_eq!(
+            crate::secrets::load(92, "api:key").as_deref(),
+            Some("k-gone")
+        );
+        // Even a secret the keychain could not read is taken out.
+        crate::secrets::pretend_unreadable(92, "api:key");
+        let stored = load();
+        forget_every_secret(&stored.collections, std::slice::from_ref(&env));
+        assert!(crate::secrets::load(91, "apiauth:token").is_none());
+        assert!(crate::secrets::load(92, "api:key").is_none());
+        delete_collection(9);
     }
 
     #[test]

@@ -67,6 +67,9 @@ struct ApiPlugin {
     network: NetworkSettings,
     data_dir: std::path::PathBuf,
     runtime: tokio::runtime::Runtime,
+    /// Removed with its data: nothing is written again, the keychain least
+    /// of all.
+    forgotten: bool,
 }
 
 fn lock(shared: &Arc<Mutex<Api>>) -> MutexGuard<'_, Api> {
@@ -1381,7 +1384,17 @@ impl Plugin for ApiPlugin {
         }
     }
 
+    fn forget_data(&mut self, _: &Host) -> Result<(), String> {
+        self.forgotten = true;
+        let api = self.api();
+        api::store::forget_every_secret(&api.collections, &api.environments);
+        Ok(())
+    }
+
     fn shutdown(&mut self, _: &Host) {
+        if self.forgotten {
+            return;
+        }
         self.api().save_environments_now();
         self.keep_tabs();
     }
@@ -1397,5 +1410,6 @@ fn main() -> std::io::Result<()> {
         network: NetworkSettings::default(),
         data_dir: std::path::PathBuf::new(),
         runtime,
+        forgotten: false,
     })
 }
