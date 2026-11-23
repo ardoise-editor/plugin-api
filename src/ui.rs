@@ -142,16 +142,21 @@ pub fn panel(api: &Api) -> Node {
         .and_then(|id| api.environment(id))
         .map_or_else(|| t!("api.no_env").to_string(), |e| e.name.clone());
     let mut body = vec![
+        // The tools are pictos with their tooltip (the words did not fit in a
+        // narrow sidebar); the new request keeps its words.
         row([
-            ghost(format!("+ {}", t!("api.new_request")), "new_request"),
-            ghost("▤", "new_collection"),
-            ghost("↓", "import"),
-            ghost("cURL", "import_curl"),
+            ghost(t!("api.new_request"), "new_request")
+                .icon("plus")
+                .with_label(),
+            fill(),
+            ghost(t!("api.new_collection"), "new_collection").icon("folder-plus"),
+            ghost(t!("api.import"), "import").icon("download"),
+            ghost(t!("api.import_curl"), "import_curl").icon("terminal"),
         ])
         .spacing(4.0),
         row([
             select("env", env_names, Some(active)),
-            ghost(t!("api.environments"), "envs"),
+            ghost(t!("api.environments"), "envs").icon("sliders-horizontal"),
         ])
         .spacing(4.0),
         row([
@@ -665,10 +670,12 @@ fn response_part(tab: &ReqTab) -> Node {
 pub fn tab(api: &Api, tab: &ReqTab) -> Node {
     let r = &tab.request;
     let methods: Vec<String> = Method::ALL.iter().map(|m| m.as_str().to_string()).collect();
+    let has_url = !r.url.trim().is_empty();
     let mut head = vec![
         input("name", &r.name, t!("api.name_hint")),
-        ghost(t!("api.save"), "save"),
-        ghost(t!("api.copy_curl"), "copy_curl"),
+        // Nothing to keep or to copy until there is an address.
+        ghost(t!("api.save"), "save").enabled(has_url),
+        ghost(t!("api.copy_curl"), "copy_curl").enabled(has_url),
     ];
     // A request not kept yet goes to a collection to choose.
     if tab.origin.is_none() && !api.collections.is_empty() {
@@ -683,7 +690,9 @@ pub fn tab(api: &Api, tab: &ReqTab) -> Node {
     let send = if tab.sending {
         button(t!("api.cancel"), "cancel").button_style(ButtonStyle::Danger)
     } else {
-        button(t!("api.send"), "send").button_style(ButtonStyle::Primary)
+        button(t!("api.send"), "send")
+            .button_style(ButtonStyle::Primary)
+            .enabled(has_url)
     };
     let missing = r.missing(&api.variables());
     let mut rows = vec![
@@ -798,5 +807,52 @@ mod tests {
         assert_eq!(size(12), "12 B");
         assert_eq!(size(2048), "2.0 KB");
         assert_eq!(size(3 * 1024 * 1024), "3.0 MB");
+    }
+
+    /// The `enabled` of the button with this action, in a drawn node.
+    fn enabled_of(node: &Node, action: &str) -> Option<bool> {
+        fn find(v: &serde_json::Value, action: &str) -> Option<bool> {
+            if v["action"] == action {
+                return Some(v.get("enabled").and_then(|e| e.as_bool()).unwrap_or(true));
+            }
+            match v {
+                serde_json::Value::Object(m) => m.values().find_map(|c| find(c, action)),
+                serde_json::Value::Array(a) => a.iter().find_map(|c| find(c, action)),
+                _ => None,
+            }
+        }
+        find(&serde_json::to_value(node).unwrap(), action)
+    }
+
+    #[test]
+    fn a_request_without_an_address_cannot_be_sent_kept_or_copied() {
+        let api = Api::load();
+        let mut blank = ReqTab::new(crate::api::model::Request::new(""), None);
+        let page = tab(&api, &blank);
+        for action in ["send", "save", "copy_curl"] {
+            assert_eq!(enabled_of(&page, action), Some(false), "{action}");
+        }
+        blank.request.url = "https://example.com".into();
+        let page = tab(&api, &blank);
+        for action in ["send", "save", "copy_curl"] {
+            assert_eq!(enabled_of(&page, action), Some(true), "{action}");
+        }
+    }
+
+    #[test]
+    fn the_tools_of_the_panel_are_pictos_with_a_tooltip() {
+        let api = Api::load();
+        let json = serde_json::to_string(&panel(&api)).unwrap();
+        for icon in [
+            "plus",
+            "folder-plus",
+            "download",
+            "terminal",
+            "sliders-horizontal",
+        ] {
+            assert!(json.contains(&format!("\"icon\":\"{icon}\"")), "{icon}");
+        }
+        // No pseudo-picto of characters is left.
+        assert!(!json.contains("\"label\":\"▤\"") && !json.contains("\"label\":\"↓\""));
     }
 }
