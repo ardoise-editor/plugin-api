@@ -1,7 +1,7 @@
 {
   "id": "ardoise.api",
   "name": { "en": "API", "fr": "API" },
-  "version": "1.2.1",
+  "version": "1.3.0",
   "api": 1,
   "description": {
     "en": "A light Postman: requests in tabs, collections, environments, tests of the answers, Postman, OpenAPI and cURL",
