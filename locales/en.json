@@ -85,6 +85,7 @@
   "api.import": "Import a Postman file",
   "api.import_curl": "Import a cURL command",
   "api.import_report": "Import",
+  "api.run_report": "Results",
   "api.imported": "Imported \"%{name}\": %{n} requests.",
   "api.imported_env": "Environment \"%{name}\" imported.",
   "api.imported_vars": "Its variables are in the environment \"%{name}\".",

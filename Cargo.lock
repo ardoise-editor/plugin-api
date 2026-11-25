@@ -63,7 +63,7 @@ dependencies = [
 
 [[package]]
 name = "ardoise-api"
-version = "1.3.1"
+version = "1.3.2"
 dependencies = [
  "ardoise-plugin",
  "chrono",

@@ -286,8 +286,8 @@ fn dialog_view(api: &Api, dialog: &Dialog) -> Node {
             rows.push(ok_cancel(&t!("api.ok")));
             column(rows).spacing(8.0)
         }
-        Dialog::Report(lines) => column([
-            text(t!("api.import_report")).style(TextStyle::Heading),
+        Dialog::Report(title, lines) => column([
+            text(title.clone()).style(TextStyle::Heading),
             scroll(column(
                 lines.iter().map(|l| text(l.clone()).style(TextStyle::Mono)),
             )),
@@ -746,6 +746,15 @@ pub fn tab(api: &Api, tab: &ReqTab) -> Node {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_report_is_headed_by_what_it_reports() {
+        let api = Api::load();
+        let dialog = Dialog::Report("Results".into(), vec!["ok".into()]);
+        let drawn = serde_json::to_string(&dialog_view(&api, &dialog)).unwrap();
+        assert!(drawn.contains("\"Results\""), "{drawn}");
+        assert!(!drawn.contains("\"Import\""), "{drawn}");
+    }
 
     #[test]
     fn the_rows_of_the_tree_have_their_actions_in_a_context_menu() {

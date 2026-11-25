@@ -60,7 +60,8 @@ pub enum Dialog {
     },
     Environments,
     /// What an import or a run said.
-    Report(Vec<String>),
+    /// What an import or a run of a collection found: title, lines.
+    Report(String, Vec<String>),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

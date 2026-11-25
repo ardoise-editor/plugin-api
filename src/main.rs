@@ -397,7 +397,7 @@ impl ApiPlugin {
             if changed {
                 api.save_environments();
             }
-            api.dialog = Some(Dialog::Report(lines));
+            api.dialog = Some(Dialog::Report(t!("api.run_report").to_string(), lines));
             host.render(PANEL, ui::panel(&api));
         });
     }
@@ -410,7 +410,10 @@ impl ApiPlugin {
         let text = match std::fs::read_to_string(&path) {
             Ok(t) => t,
             Err(e) => {
-                self.api().dialog = Some(Dialog::Report(vec![format!("{}: {e}", path.display())]));
+                self.api().dialog = Some(Dialog::Report(
+                    t!("api.import_report").to_string(),
+                    vec![format!("{}: {e}", path.display())],
+                ));
                 return;
             }
         };
@@ -425,7 +428,9 @@ impl ApiPlugin {
                     api.save_environments();
                     host.notify(t!("api.imported_env", name = name.as_str()).to_string());
                 }
-                Err(e) => api.dialog = Some(Dialog::Report(vec![e])),
+                Err(e) => {
+                    api.dialog = Some(Dialog::Report(t!("api.import_report").to_string(), vec![e]))
+                }
             }
             return;
         }
@@ -457,12 +462,14 @@ impl ApiPlugin {
                 }
                 lines.extend(imported.warnings);
                 if lines.len() > 1 {
-                    api.dialog = Some(Dialog::Report(lines));
+                    api.dialog = Some(Dialog::Report(t!("api.import_report").to_string(), lines));
                 } else {
                     host.notify(lines.remove(0));
                 }
             }
-            Err(e) => api.dialog = Some(Dialog::Report(vec![e])),
+            Err(e) => {
+                api.dialog = Some(Dialog::Report(t!("api.import_report").to_string(), vec![e]))
+            }
         }
     }
 
